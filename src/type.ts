@@ -11,3 +11,5 @@ export type LokiOpsFunction = (
   spec: string | ((record: object) => LokiObjNullAble),
   record: LokiObjNullAble,
 ) => boolean;
+
+export type EventListener = (...args: unknown[]) => void;
