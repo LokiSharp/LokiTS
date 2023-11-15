@@ -1,4 +1,11 @@
-import { LokiObj, LokiObjNullAble } from "@/type";
+import {
+  CloneMethod,
+  LokiDoc,
+  LokiDocObj,
+  LokiObj,
+  LokiObjNullAble,
+  NullAble,
+} from "@/type";
 import { LokiOps } from "@/LokiOps";
 
 export class Helper {
@@ -101,5 +108,89 @@ export class Helper {
       }
     }
     return false;
+  }
+
+  public static clone(
+    data: NullAble<LokiDoc>,
+    method: CloneMethod,
+  ): NullAble<LokiDoc> {
+    if (data === null || data === undefined) {
+      return null;
+    }
+
+    const cloneMethod = method || "parse-stringify";
+    let cloned: LokiDoc = {};
+    switch (cloneMethod) {
+      case "parse-stringify":
+        cloned = JSON.parse(JSON.stringify(data));
+        break;
+      case "shallow":
+        // more compatible method for older browsers
+        cloned = Object.create(data.constructor.prototype);
+        Object.keys(data).map(function (i) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          cloned[i] = data[i];
+        });
+        break;
+      case "shallow-assign":
+        // should be supported by newer environments/browsers
+        cloned = Object.create(data.constructor.prototype);
+        Object.assign(cloned, data);
+        break;
+    }
+
+    return cloned;
+  }
+
+  public static cloneObjectArray(
+    objarray: LokiDoc,
+    method: CloneMethod,
+  ): LokiDoc {
+    if (method == "parse-stringify") {
+      return this.clone(objarray, method)!;
+    }
+    const result = [];
+    if (Array.isArray(objarray)) {
+      for (let i = 0, len = objarray.length; i < len; i++) {
+        result[i] = this.clone(objarray[i], method)!;
+      }
+    }
+    return result;
+  }
+
+  public static freeze<T>(obj: T): void {
+    if (!Object.isFrozen(obj)) {
+      Object.freeze(obj);
+    }
+  }
+
+  public static deepFreeze<T>(obj: T): void {
+    let prop: string;
+    let i: number;
+    if (Array.isArray(obj)) {
+      for (i = 0; i < obj.length; i++) {
+        this.deepFreeze(obj[i]);
+      }
+      this.freeze(obj);
+    } else if (obj !== null && typeof obj === "object") {
+      for (prop in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, prop)) {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          this.deepFreeze(obj[prop] as LokiDocObj);
+        }
+      }
+      this.freeze(obj);
+    }
+  }
+
+  public static unFreeze<T>(obj: T): T {
+    if (!Object.isFrozen(obj)) {
+      return obj;
+    }
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    return this.clone(obj, "shallow")!;
   }
 }

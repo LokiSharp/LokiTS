@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Helper } from "@/Helper";
 import { LokiOps } from "@/LokiOps";
-import { LokiObj } from "@/type";
+import { LokiDoc, LokiDocArray, LokiDocObj, LokiObj } from "@/type";
 
 describe("Helper", () => {
   describe("containsCheckFn", () => {
@@ -224,6 +224,124 @@ describe("valueLevelOp", () => {
       const record = {};
       const result = Helper.doQueryOp(val, op, record);
       expect(result).toBe(false);
+    });
+  });
+
+  describe("clone", () => {
+    it("should return null if the input is null or undefined", () => {
+      expect(Helper.clone(null, "parse-stringify")).toBeNull();
+      expect(Helper.clone(undefined, "parse-stringify")).toBeNull();
+    });
+    const obj = { foo: "bar", baz: { qux: 42 }, quux: [1, 2, 3] };
+    it("should clone an object using the parse-stringify method", () => {
+      const cloned = Helper.clone(obj, "parse-stringify");
+      expect(cloned).toEqual(obj);
+      expect(cloned).not.toBe(obj);
+      expect((cloned as LokiDocObj)["baz"]).not.toBe(obj.baz);
+    });
+
+    it("should clone an object using the shallow method", () => {
+      const cloned = Helper.clone(obj, "shallow");
+      expect(cloned).toEqual(obj);
+      expect(cloned).not.toBe(obj);
+      expect((cloned as LokiDocObj)["baz"]).toBe(obj.baz);
+    });
+
+    it("should clone an object using the shallow-assign method", () => {
+      const cloned = Helper.clone(obj, "shallow-assign");
+      expect(cloned).toEqual(obj);
+      expect(cloned).not.toBe(obj);
+      expect((cloned as LokiDocObj)["baz"]).toBe(obj.baz);
+    });
+  });
+
+  describe("cloneObjectArray", () => {
+    const objarray = [
+      { foo: "bar", baz: { qux: 42 } },
+      { foo: "baz", baz: { qux: 43 } },
+    ];
+
+    it("should clone an object array using the parse-stringify method", () => {
+      const cloned = Helper.cloneObjectArray(objarray, "parse-stringify");
+      expect(cloned).toEqual(objarray);
+      expect(cloned).not.toBe(objarray);
+      expect(((cloned as LokiDocArray)[0] as LokiDocObj)["baz"]).not.toBe(
+        objarray[0].baz,
+      );
+    });
+
+    it("should clone an object array using the shallow method", () => {
+      const cloned = Helper.cloneObjectArray(objarray, "shallow");
+      expect(cloned).toEqual(objarray);
+      expect(cloned).not.toBe(objarray);
+      expect(((cloned as LokiDocArray)[0] as LokiDocObj)["baz"]).toBe(
+        objarray[0].baz,
+      );
+    });
+
+    it("should clone an object array using the shallow-assign method", () => {
+      const cloned = Helper.cloneObjectArray(objarray, "shallow-assign");
+      expect(cloned).toEqual(objarray);
+      expect(cloned).not.toBe(objarray);
+      expect(((cloned as LokiDocArray)[0] as LokiDocObj)["baz"]).toBe(
+        objarray[0].baz,
+      );
+    });
+  });
+
+  describe("deepFreeze", () => {
+    it("should freeze an object", () => {
+      const obj = { foo: "bar" };
+      Helper.deepFreeze(obj);
+      expect(Object.isFrozen(obj)).toBe(true);
+    });
+
+    it("should freeze an array", () => {
+      const obj: LokiDoc = [
+        {
+          foo: "bar",
+        },
+      ];
+      Helper.deepFreeze(obj);
+      expect(Object.isFrozen(obj)).toBe(true);
+    });
+  });
+
+  describe("freeze", () => {
+    it("should freeze an object", () => {
+      const obj = { foo: "bar" };
+      Helper.freeze(obj);
+      expect(Object.isFrozen(obj)).toBe(true);
+    });
+
+    it("should not freeze an already frozen object", () => {
+      const obj = { foo: "bar" };
+      Object.freeze(obj);
+      Helper.freeze(obj);
+      expect(Object.isFrozen(obj)).toBe(true);
+    });
+
+    it("should not freeze a circular object", () => {
+      const obj: LokiDoc = {
+        foo: "bar",
+      };
+      obj["baz"] = obj;
+      expect(() => Helper.freeze(obj)).not.toThrow();
+      expect(Object.isFrozen(obj)).toBe(true);
+    });
+  });
+
+  describe("unFreeze", () => {
+    it("should return the object if it is not frozen", () => {
+      const obj = { foo: "bar" };
+      expect(Helper.unFreeze(obj)).toBe(obj);
+    });
+
+    it("should return a shallow clone of the object if it is frozen", () => {
+      const obj = Object.freeze({ foo: "bar" });
+      const result = Helper.unFreeze(obj);
+      expect(result).toEqual(obj);
+      expect(result).not.toBe(obj);
     });
   });
 });
